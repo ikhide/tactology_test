@@ -8,6 +8,7 @@ import { AppResolver } from './app.resolver';
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { DepartmentsModule } from './departments/departments.module';
 import { GraphQLErrorFormatter } from './common/formatters/graphql-error.formatter';
 
 @Module({
@@ -40,6 +41,7 @@ import { GraphQLErrorFormatter } from './common/formatters/graphql-error.formatt
     }),
     AuthModule,
     UsersModule,
+    DepartmentsModule,
   ],
   providers: [AppService, AppResolver],
 })
