@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { AppService } from './app.service';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { GraphQLModule } from '@nestjs/graphql';
@@ -12,27 +12,28 @@ import { GraphQLErrorFormatter } from './common/formatters/graphql-error.formatt
 import { WinstonModule } from 'nest-winston';
 import { GraphQLError } from 'graphql';
 import { CommonModule } from './common/common.module';
-import { winstonConfig } from './config/winston.config'; // Import centralized config
+import { winstonConfig } from './config/winston.config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import databaseConfig from './config/database.config';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [databaseConfig],
+    }),
     CommonModule,
-    WinstonModule.forRoot(winstonConfig), // Use imported config
+    WinstonModule.forRoot(winstonConfig),
     TypeOrmModule.forRootAsync({
-      useFactory: () => {
-        const config = {
-          type: 'postgres' as const,
-          host: 'localhost',
-          port: 5432,
-          username: 'postgres',
-          password: 'postgres',
-          database: 'postgres',
-          autoLoadEntities: true,
-          synchronize: true,
-        };
-
-        return config;
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => {
+        const dbConfig = configService.get<TypeOrmModuleOptions>('database');
+        return {
+          ...dbConfig,
+          type: 'postgres',
+        } as TypeOrmModuleOptions;
       },
+      inject: [ConfigService],
     }),
     GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
