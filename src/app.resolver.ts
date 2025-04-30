@@ -6,7 +6,7 @@ export class AppResolver {
   constructor(private readonly appService: AppService) {}
 
   @Query(() => String)
-  hello(): string {
+  hell(): string {
     return this.appService.getHello();
   }
 }
