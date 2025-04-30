@@ -1,21 +1,25 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtStrategy } from './jwt.strategy';
-import { UsersService } from '../users/users.service';
+import { ConfigService } from '@nestjs/config'; // Import ConfigService
 
 describe('JwtStrategy', () => {
   let strategy: JwtStrategy;
 
   beforeEach(async () => {
-    const mockUsersService = {
-      findOne: jest.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         JwtStrategy,
+
         {
-          provide: UsersService,
-          useValue: mockUsersService,
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string) => {
+              if (key === 'JWT_SECRET') {
+                return 'testSecret';
+              }
+              return null;
+            }),
+          },
         },
       ],
     }).compile();
@@ -29,17 +33,12 @@ describe('JwtStrategy', () => {
 
   describe('validate', () => {
     it('should return user ID and username from JWT payload', async () => {
-      const payload = {
-        sub: '1',
-        username: 'testuser',
-      };
+      const payload = { username: 'testuser', sub: '1' };
+      const expectedUser = { userId: '1', username: 'testuser' };
 
-      const result = await strategy.validate(payload);
+      const user = await strategy.validate(payload);
 
-      expect(result).toEqual({
-        userId: payload.sub,
-        username: payload.username,
-      });
+      expect(user).toEqual(expectedUser);
     });
   });
 });

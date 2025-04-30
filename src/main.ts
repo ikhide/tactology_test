@@ -3,10 +3,9 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { WinstonModule } from 'nest-winston';
-import { winstonConfig } from './config/winston.config'; // Import centralized config
+import { winstonConfig } from './config/winston.config';
 
 async function bootstrap() {
-  // Configure Winston logger using centralized config
   const logger = WinstonModule.createLogger(winstonConfig);
 
   const app = await NestFactory.create(AppModule, {

@@ -1,20 +1,9 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthService } from './auth.service';
-import { Field, ObjectType } from '@nestjs/graphql';
 import { CreateUserDto, LoginDto } from './auth.dto';
-
-// Define the return type for the login mutation
-@ObjectType()
-class LoginResponse {
-  @Field()
-  access_token: string;
-
-  @Field()
-  username: string;
-
-  @Field()
-  userId: number;
-}
+import { CreateUserResponse, LoginResponse } from './dto/auth-response.dto';
+import { HttpStatus } from '@nestjs/common';
+import { ApiResponse } from '../common/response/api-response';
 
 @Resolver('Authentication')
 export class AuthResolver {
@@ -24,31 +13,37 @@ export class AuthResolver {
   async login(
     @Args('loginInput') loginInput: LoginDto,
   ): Promise<LoginResponse> {
-    const result = await this.authService.login(
-      loginInput.username,
-      loginInput.password,
-    );
-    return {
-      access_token: result.access_token,
-      username: result.user.username,
-      userId: result.user.id,
-    };
+    try {
+      const result = await this.authService.login(
+        loginInput.username,
+        loginInput.password,
+      );
+      return ApiResponse.success(
+        {
+          access_token: result.access_token,
+          username: result.user.username,
+          userId: result.user.id,
+        },
+        'Login successful',
+        HttpStatus.OK,
+      );
+    } catch (error) {
+      return ApiResponse.fromError(error);
+    }
   }
 
-  // For testing purposes - creates a test user
-  @Mutation(() => Boolean)
+  @Mutation(() => CreateUserResponse)
   async createUser(
     @Args('createUserInput') createUserInput: CreateUserDto,
-  ): Promise<boolean> {
+  ): Promise<CreateUserResponse> {
     try {
       await this.authService.createUser(
         createUserInput.username,
         createUserInput.password,
       );
-      return true;
+      return ApiResponse.created(true, 'User created successfully');
     } catch (error) {
-      console.error('Error creating test user:', error);
-      return false;
+      return ApiResponse.fromError(error);
     }
   }
 }
