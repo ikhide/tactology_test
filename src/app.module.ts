@@ -8,6 +8,7 @@ import { AppResolver } from './app.resolver';
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { GraphQLErrorFormatter } from './common/formatters/graphql-error.formatter';
 
 @Module({
   imports: [
@@ -32,6 +33,10 @@ import { UsersModule } from './users/users.module';
       playground: false,
       plugins: [ApolloServerPluginLandingPageLocalDefault()],
       autoSchemaFile: true,
+      formatError: (error) => {
+        const formatter = new GraphQLErrorFormatter();
+        return formatter.formatError(error as any);
+      },
     }),
     AuthModule,
     UsersModule,
