@@ -7,6 +7,10 @@ This is a NestJS application built with GraphQL, TypeORM, and PostgreSQL. It pro
 - Node.js (v20 or later recommended)
 - npm (v10 or later recommended) or yarn
 - A PostgreSQL database (e.g., local, Docker, Supabase, Neon)
+- (Optional but Recommended) NestJS CLI installed globally:
+  ```bash
+  npm i -g @nestjs/cli
+  ```
 
 ## Installation
 

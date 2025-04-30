@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { WinstonModule } from 'nest-winston';
 import { winstonConfig } from './config/winston.config';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const logger = WinstonModule.createLogger(winstonConfig);
@@ -12,7 +13,9 @@ async function bootstrap() {
     logger: logger,
   });
 
-  // Apply validation pipe globally
+  const configService = app.get(ConfigService);
+  const port = configService.get<number>('PORT', 3000);
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -24,15 +27,13 @@ async function bootstrap() {
     }),
   );
 
-  // Get HttpExceptionFilter with Winston injection from the app context
   const exceptionFilter = app.get(HttpExceptionFilter);
   app.useGlobalFilters(exceptionFilter);
 
-  await app.listen(3001);
+  await app.listen(port);
   logger.log(`Application is running on: ${await app.getUrl()}`, 'Bootstrap');
 }
 
-// Fix: properly handle the promise by using .catch
 bootstrap().catch((err) => {
   console.error('Failed to start application:', err);
   process.exit(1);
