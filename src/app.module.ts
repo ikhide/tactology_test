@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppService } from './app.service';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { GraphQLModule } from '@nestjs/graphql';
@@ -7,13 +9,27 @@ import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin
 
 @Module({
   imports: [
+    TypeOrmModule.forRootAsync({
+      useFactory: () => {
+        const config = {
+          type: 'postgres' as const,
+          host: 'localhost',
+          port: 5432,
+          username: 'postgres',
+          password: 'postgres',
+          database: 'postgres',
+          autoLoadEntities: true,
+          synchronize: true,
+        };
+
+        return config;
+      },
+    }),
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       playground: false,
       plugins: [ApolloServerPluginLandingPageLocalDefault()],
       autoSchemaFile: true,
-      // graphiql: true,
-      sortSchema: true,
     }),
   ],
   providers: [AppService, AppResolver],
