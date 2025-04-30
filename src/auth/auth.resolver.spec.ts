@@ -2,24 +2,27 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthResolver } from './auth.resolver';
 import { AuthService } from './auth.service';
 import { CreateUserDto, LoginDto } from './auth.dto';
-import { UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException, HttpStatus } from '@nestjs/common';
+import { ApiResponse } from '../common/response/api-response'; // Import ApiResponse
+
+// Mock AuthService
+const mockAuthService = {
+  login: jest.fn(),
+  createUser: jest.fn(),
+};
 
 describe('AuthResolver', () => {
   let resolver: AuthResolver;
   let authService: AuthService;
 
-  const mockAuthService = {
-    login: jest.fn(),
-    createUser: jest.fn(),
-  };
-
   beforeEach(async () => {
-    jest.clearAllMocks();
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthResolver,
-        { provide: AuthService, useValue: mockAuthService },
+        {
+          provide: AuthService,
+          useValue: mockAuthService,
+        },
       ],
     }).compile();
 
@@ -27,71 +30,77 @@ describe('AuthResolver', () => {
     authService = module.get<AuthService>(AuthService);
   });
 
+  afterEach(() => {
+    jest.clearAllMocks(); // Clear mocks after each test
+  });
+
   it('should be defined', () => {
     expect(resolver).toBeDefined();
   });
 
   describe('login', () => {
-    it('should return login response with access token and user info when credentials are valid', async () => {
+    it('should return login response within ApiResponse.success when credentials are valid', async () => {
       // Arrange
       const loginDto: LoginDto = {
         username: 'testuser',
         password: 'password123',
       };
-      const mockLoginResponse = {
+      const loginResult = {
         access_token: 'test-access-token',
-        user: {
-          id: 1,
-          username: 'testuser',
-        },
+        user: { id: 1, username: 'testuser' },
       };
-      mockAuthService.login.mockResolvedValue(mockLoginResponse);
+      const expectedData = {
+        access_token: 'test-access-token',
+        username: 'testuser',
+        userId: 1,
+      };
+      mockAuthService.login.mockResolvedValue(loginResult);
 
       // Act
       const result = await resolver.login(loginDto);
 
       // Assert
       expect(authService.login).toHaveBeenCalledWith('testuser', 'password123');
-      expect(result).toEqual({
-        access_token: 'test-access-token',
-        username: 'testuser',
-        userId: 1,
-      });
+      // Expect ApiResponse structure
+      expect(result).toEqual(
+        ApiResponse.success(expectedData, 'Login successful', HttpStatus.OK),
+      );
     });
 
-    it('should propagate exceptions from the auth service', async () => {
+    it('should return ApiResponse.fromError when credentials are invalid', async () => {
       // Arrange
       const loginDto: LoginDto = {
         username: 'testuser',
         password: 'wrongpassword',
       };
-      mockAuthService.login.mockRejectedValue(
-        new UnauthorizedException('Invalid credentials'),
-      );
+      const error = new UnauthorizedException('Invalid credentials');
+      mockAuthService.login.mockRejectedValue(error);
 
-      // Act & Assert
-      await expect(resolver.login(loginDto)).rejects.toThrow(
-        UnauthorizedException,
-      );
+      // Act
+      const result = await resolver.login(loginDto);
+
+      // Assert
       expect(authService.login).toHaveBeenCalledWith(
         'testuser',
         'wrongpassword',
       );
+      // Expect the method to return the error response object
+      expect(result).toEqual(ApiResponse.fromError(error));
+      expect(result.success).toBe(false);
+      expect(result.code).toBe(HttpStatus.UNAUTHORIZED);
+      expect(result.message).toBe('Invalid credentials');
     });
   });
 
   describe('createUser', () => {
-    it('should return true when user is created successfully', async () => {
+    it('should return ApiResponse.created(true) when user is created successfully', async () => {
       // Arrange
       const createUserDto: CreateUserDto = {
         username: 'newuser',
         password: 'password123',
       };
-      mockAuthService.createUser.mockResolvedValue({
-        id: 2,
-        username: 'newuser',
-        password: 'hashedpassword',
-      });
+      // Assume createUser service method doesn't return anything on success
+      mockAuthService.createUser.mockResolvedValue(undefined);
 
       // Act
       const result = await resolver.createUser(createUserDto);
@@ -101,7 +110,35 @@ describe('AuthResolver', () => {
         'newuser',
         'password123',
       );
-      expect(result).toBe(true);
+      // Expect ApiResponse structure
+      expect(result).toEqual(
+        ApiResponse.created(true, 'User created successfully'),
+      );
+    });
+
+    it('should return ApiResponse.fromError when user creation fails', async () => {
+      // Arrange
+      const createUserDto: CreateUserDto = {
+        username: 'existinguser',
+        password: 'password123',
+      };
+      const error = new Error('User already exists'); // Example error
+      mockAuthService.createUser.mockRejectedValue(error);
+
+      // Act
+      const result = await resolver.createUser(createUserDto);
+
+      // Assert
+      expect(authService.createUser).toHaveBeenCalledWith(
+        'existinguser',
+        'password123',
+      );
+      // Expect the method to return the error response object
+      expect(result).toEqual(ApiResponse.fromError(error));
+      expect(result.success).toBe(false);
+      // Assuming generic error maps to 500 if status isn't set
+      expect(result.code).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(result.message).toBe('User already exists');
     });
   });
 });

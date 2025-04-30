@@ -8,6 +8,7 @@ import {
   UpdateDepartmentInput,
   UpdateSubDepartmentInput,
 } from './dto/department.dto';
+import { ApiResponse } from '../common/response/api-response';
 
 describe('DepartmentsResolver', () => {
   let resolver: DepartmentsResolver;
@@ -45,7 +46,7 @@ describe('DepartmentsResolver', () => {
   });
 
   describe('createDepartment', () => {
-    it('should create a department and pass user ID from CurrentUser decorator', async () => {
+    it('should create a department and return ApiResponse.created', async () => {
       const input: CreateDepartmentInput = { name: 'HR' };
       const user = { userId: '1' };
       const department = new Department();
@@ -58,12 +59,14 @@ describe('DepartmentsResolver', () => {
       const result = await resolver.createDepartment(input, user);
 
       expect(mockDepartmentService.create).toHaveBeenCalledWith(input, 1);
-      expect(result).toEqual(department);
+      expect(result).toEqual(
+        ApiResponse.created(department, 'Department created successfully'),
+      );
     });
   });
 
   describe('createSubDepartment', () => {
-    it('should create a subdepartment and pass user ID from CurrentUser decorator', async () => {
+    it('should create a subdepartment and return ApiResponse.created', async () => {
       const input: CreateSubDepartmentInput = {
         name: 'Recruitment',
         parentId: 1,
@@ -85,24 +88,31 @@ describe('DepartmentsResolver', () => {
         input,
         1,
       );
-      expect(result).toEqual(subdepartment);
+      expect(result).toEqual(
+        ApiResponse.created(
+          subdepartment,
+          'Sub-department created successfully',
+        ),
+      );
     });
   });
 
   describe('getDepartments', () => {
-    it('should return an array of departments', async () => {
+    it('should return an array of departments within ApiResponse.success', async () => {
       const departments = [new Department(), new Department()];
       mockDepartmentService.findAll.mockResolvedValue(departments);
 
       const result = await resolver.getDepartments();
 
       expect(mockDepartmentService.findAll).toHaveBeenCalled();
-      expect(result).toEqual(departments);
+      expect(result).toEqual(
+        ApiResponse.success(departments, 'Departments retrieved successfully'),
+      );
     });
   });
 
   describe('getDepartment', () => {
-    it('should return a department by id', async () => {
+    it('should return a department by id within ApiResponse.success', async () => {
       const department = new Department();
       department.id = 1;
       mockDepartmentService.findOne.mockResolvedValue(department);
@@ -110,12 +120,23 @@ describe('DepartmentsResolver', () => {
       const result = await resolver.getDepartment(1);
 
       expect(mockDepartmentService.findOne).toHaveBeenCalledWith(1);
-      expect(result).toEqual(department);
+      expect(result).toEqual(
+        ApiResponse.success(department, 'Department retrieved successfully'),
+      );
+    });
+
+    it('should return ApiResponse.notFound if department not found', async () => {
+      mockDepartmentService.findOne.mockResolvedValue(null);
+
+      const result = await resolver.getDepartment(99);
+
+      expect(mockDepartmentService.findOne).toHaveBeenCalledWith(99);
+      expect(result).toEqual(ApiResponse.notFound('Department not found'));
     });
   });
 
   describe('updateDepartment', () => {
-    it('should update a department and return the updated entity', async () => {
+    it('should update a department and return the updated entity within ApiResponse.success', async () => {
       const updateInput: UpdateDepartmentInput = { id: 1, name: 'HR Updated' };
       const updatedDepartment = new Department();
       updatedDepartment.id = 1;
@@ -126,24 +147,43 @@ describe('DepartmentsResolver', () => {
       const result = await resolver.updateDepartment(updateInput);
 
       expect(mockDepartmentService.update).toHaveBeenCalledWith(updateInput);
-      expect(result).toEqual(updatedDepartment);
+      expect(result).toEqual(
+        ApiResponse.success(
+          updatedDepartment,
+          'Department updated successfully',
+        ),
+      );
     });
   });
 
   describe('deleteDepartment', () => {
-    it('should delete a department and return true on success', async () => {
+    it('should delete a department and return ApiResponse.successNoData on success', async () => {
       const departmentId = 1;
       mockDepartmentService.remove.mockResolvedValue(true);
 
       const result = await resolver.deleteDepartment(departmentId);
 
       expect(mockDepartmentService.remove).toHaveBeenCalledWith(departmentId);
-      expect(result).toBe(true);
+      expect(result).toEqual(
+        ApiResponse.successNoData('Department deleted successfully'),
+      );
+    });
+
+    it('should return ApiResponse.notFound if department to delete is not found', async () => {
+      const departmentId = 99;
+      mockDepartmentService.remove.mockResolvedValue(false);
+
+      const result = await resolver.deleteDepartment(departmentId);
+
+      expect(mockDepartmentService.remove).toHaveBeenCalledWith(departmentId);
+      expect(result).toEqual(
+        ApiResponse.notFound('Department not found or could not be deleted'),
+      );
     });
   });
 
   describe('updateSubDepartment', () => {
-    it('should update a subdepartment and return the updated entity', async () => {
+    it('should update a subdepartment and return the updated entity within ApiResponse.success', async () => {
       const updateInput: UpdateSubDepartmentInput = {
         id: 2,
         name: 'Recruitment Updated',
@@ -162,12 +202,17 @@ describe('DepartmentsResolver', () => {
       expect(mockDepartmentService.updateSubDepartment).toHaveBeenCalledWith(
         updateInput,
       );
-      expect(result).toEqual(updatedSubdepartment);
+      expect(result).toEqual(
+        ApiResponse.success(
+          updatedSubdepartment,
+          'Sub-department updated successfully',
+        ),
+      );
     });
   });
 
   describe('deleteSubDepartment', () => {
-    it('should delete a subdepartment and return true on success', async () => {
+    it('should delete a subdepartment and return ApiResponse.successNoData on success', async () => {
       const subdepartmentId = 2;
       mockDepartmentService.removeSubDepartment.mockResolvedValue(true);
 
@@ -176,7 +221,25 @@ describe('DepartmentsResolver', () => {
       expect(mockDepartmentService.removeSubDepartment).toHaveBeenCalledWith(
         subdepartmentId,
       );
-      expect(result).toBe(true);
+      expect(result).toEqual(
+        ApiResponse.successNoData('Sub-department deleted successfully'),
+      );
+    });
+
+    it('should return ApiResponse.notFound if sub-department to delete is not found', async () => {
+      const subdepartmentId = 99;
+      mockDepartmentService.removeSubDepartment.mockResolvedValue(false);
+
+      const result = await resolver.deleteSubDepartment(subdepartmentId);
+
+      expect(mockDepartmentService.removeSubDepartment).toHaveBeenCalledWith(
+        subdepartmentId,
+      );
+      expect(result).toEqual(
+        ApiResponse.notFound(
+          'Sub-department not found or could not be deleted',
+        ),
+      );
     });
   });
 });

@@ -1,98 +1,571 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Tactology Take-Home Test Project
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+This is a NestJS application built with GraphQL, TypeORM, and PostgreSQL. It provides CRUD operations for Departments and Sub-Departments, along with user authentication.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Prerequisites
 
-## Description
+- Node.js (v20 or later recommended)
+- npm (v10 or later recommended) or yarn
+- A PostgreSQL database (e.g., local, Docker, Supabase, Neon)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Installation
 
-## Project setup
+1.  Clone the repository:
+    ```bash
+    git clone <repository-url>
+    cd tactology_test
+    ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    # or
+    yarn install
+    ```
 
-```bash
-$ npm install
+## Configuration
+
+1.  Create a `.env` file in the root directory.
+2.  Edit the `.env` file and set the `DATABASE_URL` variable to your PostgreSQL connection string.
+3.  Add `JWT_SECRET` to your `.env` file. Generate a strong, random secret.
+
+    Example `.env`:
+
+    ```properties
+    # PostgreSQL Config
+    DATABASE_URL="postgresql://<user>:<password>@<host>:<port>/<database>?sslmode=require"
+
+    # Application Config
+    PORT=3001
+    NODE_ENV=development
+
+    # JWT Secret (REQUIRED)
+    JWT_SECRET=YOUR_SUPER_SECRET_RANDOM_STRING_HERE
+    ```
+
+    _Replace placeholders with your actual database credentials and generate a secure JWT secret._
+
+## Running the Application
+
+1.  Start the development server:
+    ```bash
+    npm run start:dev
+    # or
+    yarn start:dev
+    ```
+2.  The GraphQL Playground (Apollo Sandbox) will be available at `http://localhost:3001/graphql`.
+
+## API Endpoints (GraphQL)
+
+The GraphQL endpoint is `/graphql`.
+
+**Standard Response Format:**
+
+All API operations return a standardized response object:
+
+```typescript
+{
+  success: boolean; // true for success, false for error
+  message: string;  // Descriptive message (e.g., "Operation successful", "Resource not found")
+  code: number;     // HTTP status code (e.g., 200, 201, 404, 500)
+  data?: T | null;  // The actual data payload (type varies) or null on error/no data
+}
 ```
 
-## Compile and run the project
+**Note:** All Department and Sub-Department operations require authentication. You must first use the `login` mutation to obtain an access token and include it in the `Authorization` header of subsequent requests as a Bearer token (e.g., `Authorization: Bearer <your_access_token>`).
+
+### Authentication
+
+**1. Create User (for testing/setup)**
+
+- **Mutation:**
+  ```graphql
+  mutation CreateUser($createUserInput: CreateUserDto!) {
+    createUser(createUserInput: $createUserInput) {
+      success
+      message
+      code
+      data # Returns boolean
+    }
+  }
+  ```
+- **Variables:**
+  ```json
+  {
+    "createUserInput": {
+      "username": "testuser",
+      "password": "password123"
+    }
+  }
+  ```
+- **Expected Output (Success):**
+  ```json
+  {
+    "data": {
+      "createUser": {
+        "success": true,
+        "message": "User created successfully",
+        "code": 201,
+        "data": true
+      }
+    }
+  }
+  ```
+- **Expected Output (Failure Example - User Exists):**
+  ```json
+  {
+    "data": {
+      "createUser": {
+        "success": false,
+        "message": "User already exists", // Or similar error message
+        "code": 500, // Or appropriate error code like 409 Conflict
+        "data": false
+      }
+    }
+  }
+  ```
+
+**2. Login**
+
+- **Mutation:**
+  ```graphql
+  mutation Login($loginInput: LoginDto!) {
+    login(loginInput: $loginInput) {
+      success
+      message
+      code
+      data {
+        # Contains token and user info
+        access_token
+        username
+        userId
+      }
+    }
+  }
+  ```
+- **Variables:**
+  ```json
+  {
+    "loginInput": {
+      "username": "testuser",
+      "password": "password123"
+    }
+  }
+  ```
+- **Expected Output (Success):**
+  ```json
+  {
+    "data": {
+      "login": {
+        "success": true,
+        "message": "Login successful",
+        "code": 200,
+        "data": {
+          "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+          "username": "testuser",
+          "userId": 1
+        }
+      }
+    }
+  }
+  ```
+- **Expected Output (Failure Example - Invalid Credentials):**
+  ```json
+  {
+    "data": {
+      "login": {
+        "success": false,
+        "message": "Invalid credentials",
+        "code": 401,
+        "data": null
+      }
+    }
+  }
+  ```
+
+### Departments
+
+_(Requires Authentication - Include `Authorization: Bearer <token>` header)_
+
+**1. Get All Departments**
+
+- **Query:**
+  ```graphql
+  query Departments {
+    departments {
+      success
+      message
+      code
+      data {
+        # Array of departments
+        id
+        name
+        # Add other fields from Department entity as needed
+      }
+    }
+  }
+  ```
+- **Expected Output (Success):**
+  ```json
+  {
+    "data": {
+      "departments": {
+        "success": true,
+        "message": "Departments retrieved successfully",
+        "code": 200,
+        "data": [
+          {
+            "id": 1,
+            "name": "Engineering"
+          },
+          {
+            "id": 2,
+            "name": "Marketing"
+          }
+        ]
+      }
+    }
+  }
+  ```
+
+**2. Get Department by ID**
+
+- **Query:**
+  ```graphql
+  query Department($id: Int!) {
+    # ID should be Int based on resolver
+    department(id: $id) {
+      success
+      message
+      code
+      data {
+        # Single department object or null
+        id
+        name
+        createdAt
+        updatedAt
+        # subDepartments { id name }
+      }
+    }
+  }
+  ```
+- **Variables:**
+  ```json
+  {
+    "id": 1
+  }
+  ```
+- **Expected Output (Success):**
+  ```json
+  {
+    "data": {
+      "department": {
+        "success": true,
+        "message": "Department retrieved successfully",
+        "code": 200,
+        "data": {
+          "id": 1,
+          "name": "Engineering",
+          "subDepartments": [{ "id":2 "name": "Software" },...],
+          "createdAt": "2025-05-01T10:00:00.000Z",
+          "updatedAt": "2025-05-01T10:05:00.000Z"
+        }
+      }
+    }
+  }
+  ```
+- **Expected Output (Not Found):**
+  ```json
+  {
+    "data": {
+      "department": {
+        "success": false,
+        "message": "Department not found",
+        "code": 404,
+        "data": null
+      }
+    }
+  }
+  ```
+
+**3. Create Department**
+
+- **Mutation:**
+  ```graphql
+  mutation CreateDepartment($payload: CreateDepartmentInput!) {
+    createDepartment(payload: $payload) {
+      success
+      message
+      code
+      data {
+        # Created department object
+        id
+        name
+      }
+    }
+  }
+  ```
+- **Variables:**
+  ```json
+  {
+    "payload": {
+      "name": "Sales"
+    }
+  }
+  ```
+- **Expected Output (Success):**
+  ```json
+  {
+    "data": {
+      "createDepartment": {
+        "success": true,
+        "message": "Department created successfully",
+        "code": 201,
+        "data": {
+          "id": 3,
+          "name": "Sales"
+        }
+      }
+    }
+  }
+  ```
+
+**4. Update Department**
+
+- **Mutation:**
+  ```graphql
+  mutation UpdateDepartment($payload: UpdateDepartmentInput!) {
+    updateDepartment(payload: $payload) {
+      success
+      message
+      code
+      data {
+        # Updated department object
+        id
+        name
+      }
+    }
+  }
+  ```
+- **Variables:**
+  ```json
+  {
+    "payload": {
+      "id": 3,
+      "name": "Global Sales"
+    }
+  }
+  ```
+- **Expected Output (Success):**
+  ```json
+  {
+    "data": {
+      "updateDepartment": {
+        "success": true,
+        "message": "Department updated successfully",
+        "code": 200,
+        "data": {
+          "id": 3,
+          "name": "Global Sales"
+        }
+      }
+    }
+  }
+  ```
+
+**5. Delete Department**
+
+- **Mutation:**
+  ```graphql
+  mutation DeleteDepartment($id: Int!) {
+    # ID should be Int
+    deleteDepartment(id: $id) {
+      success
+      message
+      code
+      data # Returns boolean
+    }
+  }
+  ```
+- **Variables:**
+  ```json
+  {
+    "id": 3
+  }
+  ```
+- **Expected Output (Success):**
+  ```json
+  {
+    "data": {
+      "deleteDepartment": {
+        "success": true,
+        "message": "Department deleted successfully",
+        "code": 200,
+        "data": true
+      }
+    }
+  }
+  ```
+- **Expected Output (Not Found):**
+  ```json
+  {
+    "data": {
+      "deleteDepartment": {
+        "success": false,
+        "message": "Department not found or could not be deleted",
+        "code": 404,
+        "data": false
+      }
+    }
+  }
+  ```
+
+### Sub-Departments (Bonus)
+
+_(Requires Authentication - Include `Authorization: Bearer <token>` header)_
+
+**1. Create Sub-Department**
+
+- **Mutation:**
+  ```graphql
+  mutation CreateSubDepartment($payload: CreateSubDepartmentInput!) {
+    createSubDepartment(payload: $payload) {
+      success
+      message
+      code
+      data {
+        # Created sub-department object
+        id
+        name
+        parentId
+      }
+    }
+  }
+  ```
+- **Variables:**
+  ```json
+  {
+    "payload": {
+      "name": "Regional Sales",
+      "parentId": 3
+    }
+  }
+  ```
+- **Expected Output (Success):**
+  ```json
+  {
+    "data": {
+      "createSubDepartment": {
+        "success": true,
+        "message": "Sub-department created successfully",
+        "code": 201,
+        "data": {
+          "id": 4,
+          "name": "Regional Sales",
+          "parentId": 3
+        }
+      }
+    }
+  }
+  ```
+
+**2. Update Sub-Department**
+
+- **Mutation:**
+  ```graphql
+  mutation UpdateSubDepartment($payload: UpdateSubDepartmentInput!) {
+    updateSubDepartment(payload: $payload) {
+      success
+      message
+      code
+      data {
+        # Updated sub-department object
+        id
+        name
+        parentId
+      }
+    }
+  }
+  ```
+- **Variables:**
+  ```json
+  {
+    "payload": {
+      "id": 4,
+      "name": "East Coast Sales"
+    }
+  }
+  ```
+- **Expected Output (Success):**
+  ```json
+  {
+    "data": {
+      "updateSubDepartment": {
+        "success": true,
+        "message": "Sub-department updated successfully",
+        "code": 200,
+        "data": {
+          "id": 4,
+          "name": "East Coast Sales",
+          "parentId": 3
+        }
+      }
+    }
+  }
+  ```
+
+**3. Delete Sub-Department**
+
+- **Mutation:**
+  ```graphql
+  mutation DeleteSubDepartment($id: Int!) {
+    # ID should be Int
+    deleteSubDepartment(id: $id) {
+      success
+      message
+      code
+      data # Returns boolean
+    }
+  }
+  ```
+- **Variables:**
+  ```json
+  {
+    "id": 4
+  }
+  ```
+- **Expected Output (Success):**
+  ```json
+  {
+    "data": {
+      "deleteSubDepartment": {
+        "success": true,
+        "message": "Sub-department deleted successfully",
+        "code": 200,
+        "data": true
+      }
+    }
+  }
+  ```
+- **Expected Output (Not Found):**
+  ```json
+  {
+    "data": {
+      "deleteSubDepartment": {
+        "success": false,
+        "message": "Sub-department not found or could not be deleted",
+        "code": 404,
+        "data": false
+      }
+    }
+  }
+  ```
+
+## Running Tests
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm run test
 ```
-
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+MIT
