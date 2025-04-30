@@ -1,6 +1,7 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthService } from './auth.service';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { CreateUserDto, LoginDto } from './auth.dto';
 
 // Define the return type for the login mutation
 @ObjectType()
@@ -21,10 +22,12 @@ export class AuthResolver {
 
   @Mutation(() => LoginResponse)
   async login(
-    @Args('username') username: string,
-    @Args('password') password: string,
+    @Args('loginInput') loginInput: LoginDto,
   ): Promise<LoginResponse> {
-    const result = await this.authService.login(username, password);
+    const result = await this.authService.login(
+      loginInput.username,
+      loginInput.password,
+    );
     return {
       access_token: result.access_token,
       username: result.user.username,
@@ -35,11 +38,13 @@ export class AuthResolver {
   // For testing purposes - creates a test user
   @Mutation(() => Boolean)
   async createUser(
-    @Args('username') username: string,
-    @Args('password') password: string,
+    @Args('createUserInput') createUserInput: CreateUserDto,
   ): Promise<boolean> {
     try {
-      await this.authService.createUser(username, password);
+      await this.authService.createUser(
+        createUserInput.username,
+        createUserInput.password,
+      );
       return true;
     } catch (error) {
       console.error('Error creating test user:', error);
