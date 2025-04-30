@@ -1,5 +1,7 @@
 import { GraphQLError, GraphQLFormattedError } from 'graphql';
-import { Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
 
 interface ErrorWithStacktrace {
   stacktrace?: string[];
@@ -33,18 +35,21 @@ function getErrorCode(code: unknown): string {
   return 'INTERNAL_SERVER_ERROR';
 }
 
+@Injectable()
 export class GraphQLErrorFormatter {
-  private readonly logger = new Logger(GraphQLErrorFormatter.name);
+  constructor(
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
+  ) {}
 
   formatError(error: GraphQLError): GraphQLFormattedError {
     // Extract the stack trace safely
     const stackTrace = this.extractStackTrace(error);
 
     // Log the error with stack trace if available
-    this.logger.error(
-      `GraphQL Error: ${error.message}`,
-      stackTrace || 'No stack trace available',
-    );
+    this.logger.error(`GraphQL Error: ${error.message}`, {
+      stack: stackTrace || 'No stack trace available',
+      context: GraphQLErrorFormatter.name,
+    });
 
     // Original error from NestJS or anywhere in the app
     const originalError = error.extensions?.exception;
