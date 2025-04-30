@@ -1,11 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { WinstonModule } from 'nest-winston';
+import { winstonConfig } from './config/winston.config'; // Import centralized config
 
 async function bootstrap() {
-  const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule);
+  // Configure Winston logger using centralized config
+  const logger = WinstonModule.createLogger(winstonConfig);
+
+  const app = await NestFactory.create(AppModule, {
+    logger: logger,
+  });
 
   // Apply validation pipe globally
   app.useGlobalPipes(
@@ -19,12 +25,14 @@ async function bootstrap() {
     }),
   );
 
-  // Apply global error handling filter
-  app.useGlobalFilters(new HttpExceptionFilter());
+  // Get HttpExceptionFilter with Winston injection from the app context
+  const exceptionFilter = app.get(HttpExceptionFilter);
+  app.useGlobalFilters(exceptionFilter);
 
   await app.listen(3001);
-  logger.log(`Application is running on: ${await app.getUrl()}`);
+  logger.log(`Application is running on: ${await app.getUrl()}`, 'Bootstrap');
 }
+
 // Fix: properly handle the promise by using .catch
 bootstrap().catch((err) => {
   console.error('Failed to start application:', err);

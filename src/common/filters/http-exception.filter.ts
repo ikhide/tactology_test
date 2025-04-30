@@ -4,9 +4,11 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
-  Logger,
+  Inject,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
 
 interface ErrorWithMessage {
   message: string;
@@ -30,7 +32,9 @@ function getErrorMessage(error: unknown): string {
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(HttpExceptionFilter.name);
+  constructor(
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
+  ) {}
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -58,10 +62,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
         message: message,
       };
 
-      this.logger.error(
-        `${request.method} ${request.url} ${status}`,
-        exception instanceof Error ? exception.stack : 'Unknown error',
-      );
+      this.logger.error(`${request.method} ${request.url} ${status}`, {
+        stack: exception instanceof Error ? exception.stack : 'Unknown error',
+        context: HttpExceptionFilter.name,
+      });
 
       response.status(status).json(error);
     } else {
@@ -69,10 +73,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
       const errorMessage = getErrorMessage(exception);
 
       // Log the error
-      this.logger.error(
-        `GraphQL Error: ${errorMessage}`,
-        exception instanceof Error ? exception.stack : 'Unknown error',
-      );
+      this.logger.error(`GraphQL Error: ${errorMessage}`, {
+        stack: exception instanceof Error ? exception.stack : 'Unknown error',
+        context: HttpExceptionFilter.name,
+      });
 
       // GraphQL exceptions are handled by Apollo Server, but we can log them here
       // Apollo automatically formats GraphQL errors for the client

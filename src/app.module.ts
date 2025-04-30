@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppService } from './app.service';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
@@ -10,9 +9,15 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { DepartmentsModule } from './departments/departments.module';
 import { GraphQLErrorFormatter } from './common/formatters/graphql-error.formatter';
+import { WinstonModule } from 'nest-winston';
+import { GraphQLError } from 'graphql';
+import { CommonModule } from './common/common.module';
+import { winstonConfig } from './config/winston.config'; // Import centralized config
 
 @Module({
   imports: [
+    CommonModule,
+    WinstonModule.forRoot(winstonConfig), // Use imported config
     TypeOrmModule.forRootAsync({
       useFactory: () => {
         const config = {
@@ -29,15 +34,18 @@ import { GraphQLErrorFormatter } from './common/formatters/graphql-error.formatt
         return config;
       },
     }),
-    GraphQLModule.forRoot<ApolloDriverConfig>({
+    GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
-      playground: false,
-      plugins: [ApolloServerPluginLandingPageLocalDefault()],
-      autoSchemaFile: true,
-      formatError: (error) => {
-        const formatter = new GraphQLErrorFormatter();
-        return formatter.formatError(error as any);
-      },
+      imports: [CommonModule],
+      useFactory: (errorFormatter: GraphQLErrorFormatter) => ({
+        playground: false,
+        plugins: [ApolloServerPluginLandingPageLocalDefault()],
+        autoSchemaFile: true,
+        formatError: (error: GraphQLError) => {
+          return errorFormatter.formatError(error);
+        },
+      }),
+      inject: [GraphQLErrorFormatter],
     }),
     AuthModule,
     UsersModule,
