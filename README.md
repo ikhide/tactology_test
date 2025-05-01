@@ -344,25 +344,42 @@ _(Requires Authentication - Include `Authorization: Bearer <token>` header)_
   ```graphql
   mutation CreateDepartment($payload: CreateDepartmentInput!) {
     createDepartment(payload: $payload) {
-      success
-      message
       code
+      message
+      success
       data {
-        # Created department object
         id
         name
+        subDepartments {
+          id
+          name
+        }
       }
     }
-  }
   ```
 - **Variables:**
-  ```json
+
+  ````json
   {
     "payload": {
       "name": "Sales"
     }
   }
-  ```
+  ``` or
+
+  ```json
+  {
+  "payload": {
+    "subDepartments": [
+      {
+        "name": null
+      }
+    ],
+    "name": "department 1"
+  }
+  } ```
+  ````
+
 - **Expected Output (Success):**
   ```json
   {
@@ -374,6 +391,28 @@ _(Requires Authentication - Include `Authorization: Bearer <token>` header)_
         "data": {
           "id": 3,
           "name": "Sales"
+        }
+      }
+    }
+  }
+  ```
+- **Expected Output with subdepartments:**
+  ```json
+  {
+    "data": {
+      "createDepartment": {
+        "success": true,
+        "message": "Department created successfully",
+        "code": 201,
+        "data": {
+          "id": 3,
+          "name": "department 1",
+          "subDepartments": [
+            {
+              "id": 2,
+              "name": "subdepartment 1"
+            }
+          ]
         }
       }
     }
