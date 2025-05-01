@@ -48,7 +48,7 @@ This is a NestJS application built with GraphQL, TypeORM, and PostgreSQL. It pro
 
     _Replace placeholders with your actual database credentials and generate a secure JWT secret._
 
-## Running the Application
+## Running the Application Locally
 
 1.  Start the development server:
     ```bash
@@ -56,11 +56,20 @@ This is a NestJS application built with GraphQL, TypeORM, and PostgreSQL. It pro
     # or
     yarn start:dev
     ```
-2.  The GraphQL Playground (Apollo Sandbox) will be available at `http://localhost:3001/graphql`.
+2.  The GraphQL Playground (Apollo Sandbox) will be available locally at `http://localhost:3001/graphql`.
+
+## Deployed Backend
+
+The application is deployed and accessible at:
+
+- **Backend URL:** [https://department-manager-n4vu.onrender.com](https://department-manager-n4vu.onrender.com)
+- **GraphQL Playground:** [https://department-manager-n4vu.onrender.com/graphql](https://department-manager-n4vu.onrender.com/graphql)
+
+_Note: The deployed instance uses a free tier, so it might take a moment to wake up on the first request._
 
 ## API Endpoints (GraphQL)
 
-The GraphQL endpoint is `/graphql`.
+The GraphQL endpoint is `/graphql` (relative to the base URL, either local or deployed).
 
 **Standard Response Format:**
 

@@ -38,16 +38,20 @@ import { AppController } from './app.controller';
     }),
     GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
-      imports: [CommonModule],
-      useFactory: (errorFormatter: GraphQLErrorFormatter) => ({
+      imports: [CommonModule, ConfigModule],
+      useFactory: (
+        errorFormatter: GraphQLErrorFormatter,
+        configService: ConfigService,
+      ) => ({
         playground: false,
         plugins: [ApolloServerPluginLandingPageLocalDefault()],
         autoSchemaFile: true,
+        introspection: configService.get<string>('NODE_ENV') !== 'production',
         formatError: (error: GraphQLError) => {
           return errorFormatter.formatError(error);
         },
       }),
-      inject: [GraphQLErrorFormatter],
+      inject: [GraphQLErrorFormatter, ConfigService],
     }),
     AuthModule,
     UsersModule,
