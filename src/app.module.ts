@@ -15,6 +15,7 @@ import { CommonModule } from './common/common.module';
 import { winstonConfig } from './config/winston.config';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import databaseConfig from './config/database.config';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import databaseConfig from './config/database.config';
     UsersModule,
     DepartmentsModule,
   ],
+  controllers: [AppController],
   providers: [AppService, AppResolver],
 })
 export class AppModule {}
