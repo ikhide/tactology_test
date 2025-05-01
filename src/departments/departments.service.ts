@@ -12,6 +12,8 @@ import {
   CreateSubDepartmentInput,
   UpdateSubDepartmentInput,
 } from './dto/department.dto';
+import { PaginationArgs } from '../common/dto/pagination.dto';
+import { DepartmentsResponse } from './dto/department-response.dto';
 
 @Injectable()
 export class DepartmentsService {
@@ -75,23 +77,32 @@ export class DepartmentsService {
     return this.findOne(savedDepartment.id);
   }
 
-  async findAll(): Promise<Department[]> {
-    const departments = await this.departmentsRepository
-      .createQueryBuilder('department')
-      .leftJoinAndSelect('department.subDepartments', 'subDepartments')
-      .where('department.parentId IS NULL')
-      .andWhere((qb) => {
-        const subQuery = qb
-          .subQuery()
-          .select('child.id')
-          .from(Department, 'child')
-          .innerJoin('child.parent', 'parent')
-          .getQuery();
-        return 'department.id NOT IN ' + subQuery;
-      })
-      .getMany();
+  async findAll(paginationArgs: PaginationArgs): Promise<DepartmentsResponse> {
+    const { limit, page } = paginationArgs;
+    const skip = (page - 1) * limit;
 
-    return departments;
+    const [items, totalItems] = await this.departmentsRepository.findAndCount({
+      relations: ['subDepartments'],
+      where: { parentId: IsNull() }, // Only fetch top-level departments
+      take: limit,
+      skip: skip,
+      order: {
+        id: 'ASC',
+      },
+    });
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    return {
+      items,
+      meta: {
+        totalItems,
+        itemCount: items.length,
+        itemsPerPage: limit,
+        totalPages,
+        currentPage: page,
+      },
+    };
   }
 
   async findOne(id: number): Promise<Department> {

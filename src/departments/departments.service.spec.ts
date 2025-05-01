@@ -4,6 +4,7 @@ import { Department } from './department.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Not, IsNull } from 'typeorm';
+import { PaginationArgs } from '../common/dto/pagination.dto'; //
 
 describe('DepartmentsService', () => {
   let service: DepartmentsService;
@@ -14,6 +15,7 @@ describe('DepartmentsService', () => {
     findOne: jest.fn(),
     find: jest.fn(),
     remove: jest.fn(),
+    findAndCount: jest.fn(), // Add mock for findAndCount
     createQueryBuilder: jest.fn(() => ({
       leftJoinAndSelect: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
@@ -452,6 +454,72 @@ describe('DepartmentsService', () => {
         NotFoundException,
       );
       expect(mockDepartmentRepository.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findAll', () => {
+    it('should return paginated departments', async () => {
+      const paginationArgs: PaginationArgs = { page: 1, limit: 5 };
+      const mockDepartments = [
+        { id: 1, name: 'HR', parentId: null },
+        { id: 2, name: 'Finance', parentId: null },
+      ];
+      const totalItems = 10;
+
+      mockDepartmentRepository.findAndCount.mockResolvedValueOnce([
+        mockDepartments,
+        totalItems,
+      ]);
+
+      const result = await service.findAll(paginationArgs);
+
+      expect(mockDepartmentRepository.findAndCount).toHaveBeenCalledWith({
+        relations: ['subDepartments'],
+        where: { parentId: IsNull() },
+        take: paginationArgs.limit,
+        skip: (paginationArgs.page - 1) * paginationArgs.limit,
+        order: { id: 'ASC' },
+      });
+
+      expect(result.items).toEqual(mockDepartments);
+      expect(result.meta.totalItems).toBe(totalItems);
+      expect(result.meta.itemCount).toBe(mockDepartments.length);
+      expect(result.meta.itemsPerPage).toBe(paginationArgs.limit);
+      expect(result.meta.totalPages).toBe(
+        Math.ceil(totalItems / paginationArgs.limit),
+      );
+      expect(result.meta.currentPage).toBe(paginationArgs.page);
+    });
+
+    it('should handle different page and limit', async () => {
+      const paginationArgs: PaginationArgs = { page: 2, limit: 3 };
+      const mockDepartmentsPage2 = [
+        { id: 4, name: 'Marketing', parentId: null },
+        { id: 5, name: 'Sales', parentId: null },
+      ];
+      const totalItems = 10;
+
+      mockDepartmentRepository.findAndCount.mockResolvedValueOnce([
+        mockDepartmentsPage2,
+        totalItems,
+      ]);
+
+      const result = await service.findAll(paginationArgs);
+
+      expect(mockDepartmentRepository.findAndCount).toHaveBeenCalledWith({
+        relations: ['subDepartments'],
+        where: { parentId: IsNull() },
+        take: 3,
+        skip: 3, // (2 - 1) * 3
+        order: { id: 'ASC' },
+      });
+
+      expect(result.items).toEqual(mockDepartmentsPage2);
+      expect(result.meta.totalItems).toBe(totalItems);
+      expect(result.meta.itemCount).toBe(mockDepartmentsPage2.length);
+      expect(result.meta.itemsPerPage).toBe(3);
+      expect(result.meta.totalPages).toBe(Math.ceil(totalItems / 3)); // 4
+      expect(result.meta.currentPage).toBe(2);
     });
   });
 });

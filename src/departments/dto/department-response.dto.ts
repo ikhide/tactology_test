@@ -1,5 +1,6 @@
 import { Field, Int, ObjectType } from '@nestjs/graphql';
-import { Department } from '../department.entity'; // Import the Department entity
+import { Department } from '../department.entity';
+import { PaginationMeta } from '../../common/dto/pagination.dto';
 
 @ObjectType()
 export class DepartmentResponse {
@@ -18,17 +19,11 @@ export class DepartmentResponse {
 
 @ObjectType()
 export class DepartmentsResponse {
-  @Field()
-  success: boolean;
+  @Field(() => [Department])
+  items: Department[];
 
-  @Field()
-  message: string;
-
-  @Field(() => Int)
-  code: number;
-
-  @Field(() => [Department], { nullable: true })
-  data?: Department[];
+  @Field(() => PaginationMeta)
+  meta: PaginationMeta;
 }
 
 @ObjectType()

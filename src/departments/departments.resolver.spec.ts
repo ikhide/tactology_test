@@ -9,6 +9,9 @@ import {
   UpdateSubDepartmentInput,
 } from './dto/department.dto';
 import { ApiResponse } from '../common/response/api-response';
+import { PaginationArgs } from '../common/dto/pagination.dto';
+import { DepartmentsResponse } from './dto/department-response.dto';
+import { HttpException, HttpStatus } from '@nestjs/common';
 
 describe('DepartmentsResolver', () => {
   let resolver: DepartmentsResolver;
@@ -98,15 +101,41 @@ describe('DepartmentsResolver', () => {
   });
 
   describe('getDepartments', () => {
-    it('should return an array of departments within ApiResponse.success', async () => {
-      const departments = [new Department(), new Department()];
-      mockDepartmentService.findAll.mockResolvedValue(departments);
+    it('should call service findAll with pagination args and return the result', async () => {
+      const paginationArgs: PaginationArgs = { page: 1, limit: 10 };
+      const mockPaginatedResult: DepartmentsResponse = {
+        items: [new Department(), new Department()],
+        meta: {
+          totalItems: 5,
+          itemCount: 2,
+          itemsPerPage: 10,
+          totalPages: 1,
+          currentPage: 1,
+        },
+      };
+      mockDepartmentService.findAll.mockResolvedValue(mockPaginatedResult);
 
-      const result = await resolver.getDepartments();
+      const result = await resolver.getDepartments(paginationArgs);
 
-      expect(mockDepartmentService.findAll).toHaveBeenCalled();
-      expect(result).toEqual(
-        ApiResponse.success(departments, 'Departments retrieved successfully'),
+      expect(mockDepartmentService.findAll).toHaveBeenCalledWith(
+        paginationArgs,
+      );
+      expect(result).toEqual(mockPaginatedResult);
+    });
+
+    it('should throw HttpException if service throws an error', async () => {
+      const paginationArgs: PaginationArgs = { page: 1, limit: 10 };
+      const error = new Error('Database error');
+      mockDepartmentService.findAll.mockRejectedValue(error);
+
+      await expect(resolver.getDepartments(paginationArgs)).rejects.toThrow(
+        new HttpException(
+          'Failed to retrieve departments',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        ),
+      );
+      expect(mockDepartmentService.findAll).toHaveBeenCalledWith(
+        paginationArgs,
       );
     });
   });

@@ -73,7 +73,7 @@ The GraphQL endpoint is `/graphql` (relative to the base URL, either local or de
 
 **Standard Response Format:**
 
-All API operations return a standardized response object:
+Most API operations (excluding the paginated `departments` query) return a standardized response object:
 
 ```typescript
 {
@@ -81,6 +81,21 @@ All API operations return a standardized response object:
   message: string;  // Descriptive message (e.g., "Operation successful", "Resource not found")
   code: number;     // HTTP status code (e.g., 200, 201, 404, 500)
   data?: T | null;  // The actual data payload (type varies) or null on error/no data
+}
+```
+
+**Paginated Response Format (for `departments` query):**
+
+```typescript
+{
+  items: [Department]; // Array of department objects for the current page
+  meta: {
+    totalItems: number; // Total number of departments available
+    itemCount: number; // Number of departments on the current page
+    itemsPerPage: number; // The limit used for this request
+    totalPages: number; // Total number of pages available
+    currentPage: number; // The current page number
+  }
 }
 ```
 
@@ -199,22 +214,38 @@ All API operations return a standardized response object:
 
 _(Requires Authentication - Include `Authorization: Bearer <token>` header)_
 
-**1. Get All Departments**
+**1. Get All Departments (Paginated)**
 
 - **Query:**
   ```graphql
-  query Departments {
-    departments {
-      success
-      message
-      code
-      data {
-        # Array of departments
+  query Departments($limit: Int, $page: Int) {
+    departments(limit: $limit, page: $page) {
+      items {
         id
         name
         # Add other fields from Department entity as needed
+        subDepartments {
+          id
+          name
+        }
+      }
+      meta {
+        totalItems
+        itemCount
+        itemsPerPage
+        totalPages
+        currentPage
       }
     }
+  }
+  ```
+- **Variables (Optional):**
+  - `limit`: Number of items per page (default: 10)
+  - `page`: Page number to retrieve (default: 1)
+  ```json
+  {
+    "limit": 5,
+    "page": 2
   }
   ```
 - **Expected Output (Success):**
@@ -222,19 +253,26 @@ _(Requires Authentication - Include `Authorization: Bearer <token>` header)_
   {
     "data": {
       "departments": {
-        "success": true,
-        "message": "Departments retrieved successfully",
-        "code": 200,
-        "data": [
+        "items": [
           {
-            "id": 1,
-            "name": "Engineering"
+            "id": 6,
+            "name": "Department F",
+            "subDepartments": []
           },
           {
-            "id": 2,
-            "name": "Marketing"
+            "id": 7,
+            "name": "Department G",
+            "subDepartments": []
           }
-        ]
+          // ... up to 5 items for page 2
+        ],
+        "meta": {
+          "totalItems": 25,
+          "itemCount": 5,
+          "itemsPerPage": 5,
+          "totalPages": 5,
+          "currentPage": 2
+        }
       }
     }
   }

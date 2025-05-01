@@ -16,6 +16,7 @@ import { GqlAuthGuard } from '../auth/gql-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { UseGuards, HttpStatus, HttpException } from '@nestjs/common';
 import { ApiResponse } from '../common/response/api-response';
+import { PaginationArgs } from '../common/dto/pagination.dto';
 
 @Resolver(() => Department)
 @UseGuards(GqlAuthGuard)
@@ -39,15 +40,17 @@ export class DepartmentsResolver {
   }
 
   @Query(() => DepartmentsResponse, { name: 'departments' })
-  async getDepartments(): Promise<DepartmentsResponse> {
+  async getDepartments(
+    @Args() paginationArgs: PaginationArgs,
+  ): Promise<DepartmentsResponse> {
     try {
-      const departments = await this.departmentsService.findAll();
-      return ApiResponse.success(
-        departments,
-        'Departments retrieved successfully',
-      );
+      return await this.departmentsService.findAll(paginationArgs);
     } catch (error: unknown) {
-      return ApiResponse.fromError(error);
+      console.error('Error fetching departments:', error);
+      throw new HttpException(
+        'Failed to retrieve departments',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
